@@ -2,7 +2,7 @@ package CloudComputingAssignment
 
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{Encoder, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Row, SparkSession}
 import org.apache.spark.sql.functions._
 
 object Query1 {
@@ -36,22 +36,22 @@ object Query1 {
     NYCTaxiRides(ride.pickup_datetime, ride.dropoff_datetime, pickup_longitude_grid, pickup_latitude_grid, dropoff_longitude_grid, dropoff_latitude_grid)
   }*/
 
-/*
-    case class NYCTaxiRides(pickup_datetime: java.sql.Timestamp,
-                        dropoff_datetime: java.sql.Timestamp,
-                        pickup_longitude_grid: Int,
-                        pickup_latitude_grid: Int,
-                        dropoff_longitude_grid: Int,
-                        dropoff_latitude_grid: Int,
-                       )
+  /*
+      case class NYCTaxiRides(pickup_datetime: java.sql.Timestamp,
+                          dropoff_datetime: java.sql.Timestamp,
+                          pickup_longitude_grid: Int,
+                          pickup_latitude_grid: Int,
+                          dropoff_longitude_grid: Int,
+                          dropoff_latitude_grid: Int,
+                         )
 
-    def computeGrid1Positions(ride: RawNYCTaxiRides): NYCTaxiRides = {
-    val pickup_longitude_grid = computeLongitudeGridId(ride.pickup_longitude)
-    val pickup_latitude_grid = computeLatitudeGridId(ride.pickup_latitude)
-    val dropoff_longitude_grid = computeLongitudeGridId(ride.dropoff_longitude)
-    val dropoff_latitude_grid = computeLatitudeGridId(ride.dropoff_latitude)
-    NYCTaxiRides(ride.pickup_datetime, ride.dropoff_datetime, pickup_longitude_grid, pickup_latitude_grid, dropoff_longitude_grid, dropoff_latitude_grid)
-  }*/
+      def computeGrid1Positions(ride: RawNYCTaxiRides): NYCTaxiRides = {
+      val pickup_longitude_grid = computeLongitudeGridId(ride.pickup_longitude)
+      val pickup_latitude_grid = computeLatitudeGridId(ride.pickup_latitude)
+      val dropoff_longitude_grid = computeLongitudeGridId(ride.dropoff_longitude)
+      val dropoff_latitude_grid = computeLatitudeGridId(ride.dropoff_latitude)
+      NYCTaxiRides(ride.pickup_datetime, ride.dropoff_datetime, pickup_longitude_grid, pickup_latitude_grid, dropoff_longitude_grid, dropoff_latitude_grid)
+    }*/
 
   def main(args: Array[String]) {
 
@@ -60,11 +60,12 @@ object Query1 {
       .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
+    import spark.sqlContext.implicits._
+
     val latitudeGrid_udf = udf((latitude: Double) => computeLatitudeGridId(latitude))
     val longitudeGrid_udf = udf((latitude: Double) => computeLongitudeGridId(latitude))
     val taxiRidesFile = "data/taxiRides/"
     val schema = ScalaReflection.schemaFor[NYCTaxiRides].dataType.asInstanceOf[StructType]
-
     val taxiRides = spark.readStream.format("csv")
       .option("timeStampFormat", "yyyy-MM-dd HH:mm:ss")
       .schema(schema)
@@ -76,11 +77,16 @@ object Query1 {
       .withColumn("pickup_longitude", longitudeGrid_udf(col("pickup_longitude")))
       .withColumn("dropoff_latitude", latitudeGrid_udf(col("dropoff_latitude")))
       .withColumn("dropoff_longitude", longitudeGrid_udf(col("dropoff_longitude")))
+      .withColumn("time_window", window(col("dropoff_datetime"), "10 minutes", "5 minutes"))
     taxiRides3.printSchema()
     //val writer = taxiRides.groupBy("medallion").count().writeStream.format("console").outputMode("complete").start()
     //val checkpointDir = "./checkpoint"
-    val writer2 = taxiRides3.groupBy("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude").count().writeStream.format("console").outputMode("complete").start()
+    val taxiRides4 = taxiRides3.groupBy("time_window", "pickup_latitude", "pickup_longitude", "dropoff_latitude", "dropoff_longitude").count().orderBy(asc("time_window"), desc("count"))
+    val writer2 = taxiRides4.writeStream.format("console").outputMode("complete").option("truncate", "false").start()
+    //val taxiRide4 = taxiRides3.countByWindow()
+    //val writer2 = toStateCountsByWindow(taxiRide4,spark)
     writer2.awaitTermination()
+
 
     /* ========= VERSION PARSING INTO DATASET ===========
     import spark.implicits._;
@@ -101,4 +107,25 @@ object Query1 {
     taxiRidesDs.show()
     */
   }
+
+
+  val WINDOW: String = s"300 seconds"
+  val SLIDE: String = s"60 seconds"
+  /*
+    def toStateCountsByWindow(linesFromFile: Dataset[NYCTaxiRides],
+                              sparkSession: SparkSession):
+    Dataset[Row] = {
+
+      import sparkSession.implicits._
+
+      System.out.println("timeStampedDF:" + linesFromFile.printSchema())
+
+      //window($"dropoff_time", WINDOW, SLIDE).as("time_window")
+      linesFromFile
+        .groupBy("pickup_latitude", "pickup_longitude", "dropoff_latitude", "dropoff_longitude")
+        .count()
+        //.withColumn("window_start", $"time_window.start")
+        //.orderBy($"time_window", $"count".desc)
+        .orderBy($"count".desc)
+    }*/
 }
