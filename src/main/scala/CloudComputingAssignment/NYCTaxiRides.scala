@@ -1,6 +1,7 @@
 package CloudComputingAssignment
 
 import org.apache.commons.net.ntp.TimeStamp
+import org.apache.spark.sql.execution.streaming.FileStreamSource.Timestamp
 import org.apache.spark.sql.types.TimestampType
 
 case class NYCTaxiRides(medallion: String,
