@@ -83,7 +83,7 @@ object Query1_Stateful_Streaming {
       FileUtils.forceMkdir(new File(OUTPUT_FOLDER))
       //we use true to append the file instead of erasing it each time we try to add newer values
       fileWriter = new FileWriter(new File( OUTPUT_FOLDER + s"/results_partition_$partitionId"), true)
-      fileWriter.append("\n \nTimeWindow -\t\t\t\t\t\t\t\t Update-time :\t\t\t\t\t[Route:Count,latest_dropoff]\t\t\t\t[Route:Count,latest_dropoff],...   \n")
+      fileWriter.append("TimeWindow -\t\t\t\t\t\t\t\t Update-time :\t\t\t\t\t[Route:Count,latest_dropoff]\t\t\t\t[Route:Count,latest_dropoff],...   \n")
       true
     }
 
@@ -211,7 +211,8 @@ object Query1_Stateful_Streaming {
       .appName("CloudComputingAssignment-Sateful-Streaming")
       .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
-    spark.sqlContext.sql("set spark.sql.shuffle.partitions=200")
+    //the following line can be commented if spark.sql.shuffle.partitions is to be set when calling spark submit
+    //spark.sqlContext.sql("set spark.sql.shuffle.partitions=200") //should be adjusted according to the cluster
 
     /*Import implicits_ allows sparks to handle lots of the conversions automatically.
     * see sparks Encoders for more information */
@@ -251,7 +252,7 @@ object Query1_Stateful_Streaming {
     val optionnalStatesByWindow = NYCTaxiRidesRefinedDf
       .withWatermark("dropoff_time", DELAY)
       .as[NYCTaxiRide]
-      .groupByKey(rides => rides.time_window).mapGroupsWithState(GroupStateTimeout.EventTimeTimeout())(windowTopNMapping)
+      .groupByKey(rides => rides.time_window).mapGroupsWithState(GroupStateTimeout.EventTimeTimeout)(windowTopNMapping)
 
 
     //Set up output with the writerForText that process the optionnal states for each window and launch the Streaming Query

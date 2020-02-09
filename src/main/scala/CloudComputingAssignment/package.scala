@@ -41,7 +41,7 @@ package object CloudComputingAssignment {
   /**
    * Size of Top created per time window
    */
-  val TOP_SIZE: Int = 3
+  val TOP_SIZE: Int = 10
 
   /** Justification for the following values come from https://debs.org/grand-challenges/2015/ :
    * Question 1: Is the earth flat or how to map coordinates to cells?
