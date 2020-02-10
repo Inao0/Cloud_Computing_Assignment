@@ -140,7 +140,7 @@ object Query1_Stateful_Streaming {
     CountAndLatestDropoff to get the max we use a mutable copy of the WindowStateOfTaxiRoutes currentState (as it is a map
     containing CountAndLatestDropoff indexed by routes). We then get the max value from the map and remove it from the
      collection. We repeat this to get the n most frequented routes according to the windowStateOfTaxiRoutes*/
-    val values = collection.mutable.Map[Route, CountAndLatestDropoff](windowStateOfTaxiRoutes.currentState.toSeq: _*)
+    val values = collection.mutable.Map[Route, CountAndLatestDropoff](windowStateOfTaxiRoutes.currentState.toSeq: _*) //Potential memory issue ?
 
     for (i <- 0 until n) {
       if (values.nonEmpty) {
@@ -181,7 +181,7 @@ object Query1_Stateful_Streaming {
     } else {
       // get current state or create a new one if there's no previous state
       val currentState = state.getOption.getOrElse(WindowStateOfTaxiRoutes(timeWindow, Map[Route, CountAndLatestDropoff]()))
-      // enrich the state with the new events
+      // enrich the state with the new events. Potential memory issue ?
       val updatedCount = collection.mutable.Map[Route, CountAndLatestDropoff](currentState.currentState.toSeq: _*)
       values.foreach(ride => {
         // get the current count and last drop-off for the current ride route. If it doesn't exist set it to (0,1970-01-01 01:00:00.0)
@@ -193,6 +193,7 @@ object Query1_Stateful_Streaming {
       // update the state
       val updatedState = WindowStateOfTaxiRoutes(timeWindow, collection.immutable.Map(updatedCount.toList: _*))
       state.update(updatedState)
+
 
       state.getOption
     }

@@ -17,10 +17,10 @@ import org.apache.spark.sql.{Dataset, Row, SparkSession}
  *
  * For example :
  *
- * [[time_window],pickup_latitude,pickup_longitude,dropoff_latitude,dropoff_longitude,latest_dropoff,count,rank
+ * &#91;&#91;time_window],pickup_latitude,pickup_longitude,dropoff_latitude,dropoff_longitude,latest_dropoff,count,rank
  *
- * [[2012-12-31 23:41:00.0,2013-01-01 00:11:00.0],1,1,1,300,2013-01-01 00:10:30.0,3,1]
- * [[2012-12-31 23:41:00.0,2013-01-01 00:11:00.0],1,1,300,1,2013-01-01 00:10:00.0,3,2]
+ * &#91;&#91;2012-12-31 23:41:00.0,2013-01-01 00:11:00.0],1,1,1,300,2013-01-01 00:10:30.0,3,1]
+ * &#91;&#91;2012-12-31 23:41:00.0,2013-01-01 00:11:00.0],1,1,300,1,2013-01-01 00:10:00.0,3,2]
  *
  * The default output file is /Result/Batch.txt
  */
@@ -91,7 +91,7 @@ object Query1_Batch {
             //Order first by time_window, then by rank
             .orderBy("time_window", "rank")
             //.drop("rank") // can be uncommented to drop the "rank" column
-            .collect().toList
+            .collect().toList // potential bottle neck + risk of OOM error
 
           // Set up the output and print the result of the batch
           val fileWriter = new FileWriter(OUTPUT_FILE, false) // switch to true if you want to append the ouput file
